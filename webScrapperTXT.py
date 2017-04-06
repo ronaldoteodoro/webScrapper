@@ -1,5 +1,10 @@
 from bs4 import BeautifulSoup
 import requests
+import wget
+import pyodbc
+
+cnxn = pyodbc.connect('DRIVER={SQL Server};SERVER=srvFLEX;DATABASE=FCDEV;UID=sa;PWD=senhasa@1234')
+cursor = cnxn.cursor()
 
 def get_book_info(barcode):
         headers = {
@@ -16,30 +21,45 @@ def get_book_info(barcode):
         title = soup.find(class_='product-master-title').text.strip()
         sinopse = soup.find(id='collapseOne').find(class_='panel-body').text.strip()
         book_data = soup.find(id='bookData')
+        imgPath = soup.find(id='product-media').find(class_='img-responsive')
+
         dt = {
                 'title': title,
                 'sinopse': sinopse,
+                'imgPath' : 'https://www.cirandacultural.com.br{0}'.format(imgPath.attrs.get('src'))
         }
+        dt['imgPath'] = dt['imgPath'].replace('false','true')
         dd = book_data.find_all('dd')
         for i, data in enumerate(book_data.find_all('dt')):
-                key = data.text.strip()
+                key = str( data.text.strip() )
+                key = key.replace(':','')
                 dt[key] = dd[i].text.strip()
         return dt
 
 for linha in open('codigoBarras.txt'):
-  linha = linha.strip()
-  print(linha)
-  try:
-      if linha[:1] != '#':
+          linha = linha.strip()
+          print(linha)
           whatever = get_book_info(linha)
-          print(whatever['title'])
-          print(whatever['sinopse'])
-          print(whatever['ISBN:'])
-          print(whatever['Dimensões:'])
-  except AttributeError:
+          filename = whatever['Código de barras'] + '.jpg'
+          print("arquivo: ",filename)
+          url = whatever['imgPath']
+          #img = wget.download(url,out="c:\\imgCiranda\\" + filename)
+          peso = whatever['Peso'].split(' ')
+          whatever['Peso'] = peso[0]
+          print(whatever)
+          print(int(whatever['Código de barras']))
+          cursor.execute("UPDATE dbo.produtos SET NomeProd = ? , Peso  = ? , DescrLonga = ? WHERE CodBarrasProd = ?",
+                         whatever['title'],  int (whatever['Peso']) ,whatever['sinopse'] , int (whatever['Código de barras']))
+          print(cursor.rowcount, ' produtos atualizados')
+          cnxn.commit()
+'''
+  except AttributeError as exp:
+     print(exp.args)
      pass
+
   except KeyError:
-      pass
+      pass'''
+
 
 
 
