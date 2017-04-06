@@ -56,9 +56,11 @@ for row in rows:
                            int(whatever['Código de barras']))
             cnxn.commit()
             atual = atual + 1
-    except AttributeError :
+    except AttributeError as attribExp :
+        attribExp.__traceback__
         pass
-    except KeyError:
+    except KeyError as keyErrorExp:
+        keyErrorExp.__traceback__
         pass
 
 
